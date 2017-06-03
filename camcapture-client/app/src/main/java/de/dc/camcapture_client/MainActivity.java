@@ -4,7 +4,6 @@ import android.content.res.AssetManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -21,7 +20,6 @@ import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Properties;
 
@@ -39,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
                  DataOutputStream dos = new DataOutputStream(socket.getOutputStream())
             ) {
                 Log.i(TAG, "Connection " + ++count + " from server " + socket.getInetAddress() + ":" + socket.getPort());
-                dos.writeUTF("HTTP-Tunnel-Client version 0.0.1-SNAPSHOT");
+                dos.writeUTF("CamCapture-Client version 0.0.1-SNAPSHOT");
                 while (true) {
                     buffer = (byte[]) ois.readObject();
                     if (0 == buffer.length) {
