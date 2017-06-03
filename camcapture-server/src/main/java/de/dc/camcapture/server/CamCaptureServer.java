@@ -27,28 +27,28 @@ public class CamCaptureServer {
 				ServerSocket serverSocket = new ServerSocket(port); //
 				Socket clientSocket = serverSocket.accept(); //
 				DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
-				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()); //
-				PrintWriter pw = new PrintWriter(clientSocket.getOutputStream()) //
+				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream())
 			) {
 				String address = clientSocket.getInetAddress().toString();
 				int port = clientSocket.getPort();
 				System.out.println("Connection " + ++count + " with client " + address + ":" + port);
-				pw.println("CamCapture-Server version 0.0.1-SNAPSHOT");
 				String input;
 				while (null != (input = dis.readUTF())) {
 					System.out.println("--> " + input);
-					InputStreamReader isr = new InputStreamReader(System.in);
-					BufferedReader br = new BufferedReader(isr);
-					String yes = br.readLine();
-					if ("y".equals(yes) || "j".equals(yes)) {
-						try (FileInputStream fis = new FileInputStream(new File("test.jpg"))) {
+					try (FileInputStream fis = new FileInputStream(new File("test.jpg"))) {
+						InputStreamReader isr = new InputStreamReader(System.in);
+						BufferedReader br = new BufferedReader(isr);
+						String yes = br.readLine();
+						if ("y".equals(yes) || "j".equals(yes)) {
 							byte[] buffer = new byte[fis.available()];
 							fis.read(buffer);
 							oos.writeObject(buffer);
+							oos.flush();
 						}
 					}
 				}
 			} catch (IOException e) {
+				System.err.println("Connection failed");
 				e.printStackTrace();
 			}
 		}
