@@ -1,6 +1,7 @@
 package de.dc.camcapture_client;
 
 import android.content.res.AssetManager;
+import android.media.MediaScannerConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -36,7 +37,9 @@ public class MainActivity extends AppCompatActivity {
                  ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
                  DataOutputStream dos = new DataOutputStream(socket.getOutputStream())
             ) {
-                Log.i(TAG, "Connection " + ++count + " from server " + socket.getInetAddress() + ":" + socket.getPort());
+                String address = socket.getInetAddress().toString();
+                int port = socket.getPort();
+                Log.i(TAG, "Connection " + ++count + " with server " + address + ":" + port);
                 dos.writeUTF("CamCapture-Client version 0.0.1-SNAPSHOT");
                 while (true) {
                     buffer = (byte[]) ois.readObject();
@@ -72,6 +75,9 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = MainActivity.class.getSimpleName();
 
+    private static final String DIRECTORY_NAME = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/CamCapture/";
+    private static final File DIRECTORY = new File(DIRECTORY_NAME);
+
     /*
      * Main activity lifecycle
      */
@@ -88,6 +94,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "on create");
         permissionRequestHandler.checkPermissions();
+        if (!isExternalStorageWritable()) {
+            // TODO: error handling
+            return;
+        }
+        if (!DIRECTORY.mkdirs()) {
+            Log.d(TAG, "Cannot create directory " + DIRECTORY_NAME);
+        }
         setContentView(R.layout.activity_main);
         button = (Button) findViewById(R.id.button);
         button.setOnClickListener(v -> executeClientTask());
@@ -182,16 +195,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void executeClientTask() {
         AssetManager assetMgr = getAssets();
-        try (InputStream is = assetMgr.open("app.properties")) {
+        try (InputStream is = assetMgr.open("client.properties")) {
             Properties props = new Properties();
             props.load(is);
-            String hostname = props.getProperty("server.hostname.local");
+            String hostname = props.getProperty("server.hostname");
             int port = Integer.parseInt(props.getProperty("server.port"));
-            Log.d(TAG, "Connecting to " + hostname + ":" + port);
+            Log.i(TAG, "Connecting to " + hostname + ":" + port);
             ClientTask clientTask = new ClientTask(hostname, port);
             clientTask.execute();
         } catch (IOException e) {
-            e.printStackTrace();
+            String msg = "Can't load client properties";
+            Log.e(TAG, msg);
+            throw new RuntimeException(msg, e);
         }
     }
 
@@ -201,21 +216,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveImage(byte[] bytes) {
-        if (!isExternalStorageWritable()) {
-            // TODO: error handling
-            return;
-        }
-        String dirname = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/CamCapture";
-        File dir = new File(dirname);
-        if (dir.mkdirs()) {
-            Log.d(TAG, "Created directory " + dirname);
-        }
-        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String filename = timestamp + ".jpg";
-        File imageFile = new File(dir, filename);
+        File imageFile = new File(DIRECTORY, filename);
         try (FileOutputStream fos = new FileOutputStream(imageFile)) {
             fos.write(bytes);
             fos.flush();
+            MediaScannerConnection.scanFile(this, new String[]{imageFile.toString()}, null, null);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
