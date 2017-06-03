@@ -1,5 +1,6 @@
 package de.dc.camcapture_client;
 
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.media.MediaScannerConnection;
 import android.os.AsyncTask;
@@ -19,10 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import de.dc.camcapture_client.utils.PermissionRequestHandler;
 
@@ -34,28 +35,38 @@ public class MainActivity extends AppCompatActivity {
         protected Void doInBackground(Void... params) {
             Log.d(TAG, "do in background");
             try (Socket socket = new Socket(hostname, port);
-                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
                  DataOutputStream dos = new DataOutputStream(socket.getOutputStream())
             ) {
-                String address = socket.getInetAddress().toString();
-                int port = socket.getPort();
-                Log.i(TAG, "Connection " + ++count + " with server " + address + ":" + port);
-                dos.writeUTF("CamCapture-Client version 0.0.1-SNAPSHOT");
-                while (true) {
-                    buffer = (byte[]) ois.readObject();
-                    if (0 == buffer.length) {
-                        dos.writeUTF("you gave me bullshit!");
-                        continue;
-                    }
-                    saveImage(buffer);
-                    dos.writeUTF("thank you!");
+                String serverAddress = socket.getInetAddress().toString();
+                int serverPort = socket.getPort();
+                Log.i(TAG, "Connection " + ++count + " with server " + serverAddress + ":" + serverPort);
+                try {
+                    String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                    dos.writeUTF("camcapture-client version " + version);
+                } catch (PackageManager.NameNotFoundException e) {
+                    Log.e(TAG, "Cannot read version", e);
                 }
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
+                try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+                    while (true) {
+                        buffer = (byte[]) ois.readObject();
+                        if (0 == buffer.length) {
+                            dos.writeUTF("you sent me bullshit!");
+                            continue;
+                        }
+                        saveImage(buffer);
+                        dos.writeUTF("thank you!");
+                    }
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
+                Log.e(TAG, "Connection to server failed. Next try in 30 seconds.", e);
+                try {
+                    TimeUnit.SECONDS.sleep(30);
+                } catch (InterruptedException e1) {
+                    // nothing to do...
+                }
+                executeClientTask(hostname, port);
             }
             return null;
         }
@@ -75,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
     public static final String TAG = MainActivity.class.getSimpleName();
 
-    private static final String DIRECTORY_NAME = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/CamCapture/";
+    private static final String DIRECTORY_NAME = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/CamCapture";
     private static final File DIRECTORY = new File(DIRECTORY_NAME);
 
     /*
@@ -103,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_main);
         button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(v -> executeClientTask());
+        button.setOnClickListener(v -> startConnection());
         super.onCreate(savedInstanceState);
     }
 
@@ -187,27 +198,22 @@ public class MainActivity extends AppCompatActivity {
     ImageView imageView;
     Button button;
 
+    private ClientTask clientTask;
+
     private final PermissionRequestHandler permissionRequestHandler;
 
     public MainActivity() {
         this.permissionRequestHandler = new PermissionRequestHandler(this);
     }
 
-    private void executeClientTask() {
-        AssetManager assetMgr = getAssets();
-        try (InputStream is = assetMgr.open("client.properties")) {
-            Properties props = new Properties();
-            props.load(is);
-            String hostname = props.getProperty("server.hostname");
-            int port = Integer.parseInt(props.getProperty("server.port"));
-            Log.i(TAG, "Connecting to " + hostname + ":" + port);
-            ClientTask clientTask = new ClientTask(hostname, port);
-            clientTask.execute();
-        } catch (IOException e) {
-            String msg = "Can't load client properties";
-            Log.e(TAG, msg);
-            throw new RuntimeException(msg, e);
+    private void executeClientTask(String hostname, int port) {
+        if (null == clientTask || !clientTask.isCancelled()) {
+            if (null != clientTask) {
+                clientTask.cancel(true);
+            }
+            clientTask = new ClientTask(hostname, port);
         }
+        clientTask.execute();
     }
 
     private boolean isExternalStorageWritable() {
@@ -223,10 +229,27 @@ public class MainActivity extends AppCompatActivity {
             fos.write(bytes);
             fos.flush();
             MediaScannerConnection.scanFile(this, new String[]{imageFile.toString()}, null, null);
+            Log.i(TAG, "Saved image " + imageFile.toString());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void startConnection() {
+        AssetManager assetMgr = getAssets();
+        try (InputStream is = assetMgr.open("client.properties")) {
+            Properties props = new Properties();
+            props.load(is);
+            String hostname = props.getProperty("server.hostname");
+            int port = Integer.parseInt(props.getProperty("server.port"));
+            Log.i(TAG, "Connecting to " + hostname + ":" + port);
+            executeClientTask(hostname, port);
+        } catch (IOException e) {
+            String msg = "Can't load client properties";
+            Log.e(TAG, msg);
+            throw new RuntimeException(msg, e);
         }
     }
 }
