@@ -1,0 +1,5 @@
+server.properties
+.classpath
+.project
+/.settings
+/target/
