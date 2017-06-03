@@ -23,7 +23,6 @@ public class CamCaptureServer {
 		@Override
 		public void run() {
 			System.out.println("running socket server thread...");
-			File file = new File("test.jpg");
 			try ( //
 				ServerSocket serverSocket = new ServerSocket(port); //
 				Socket clientSocket = serverSocket.accept(); //
@@ -31,20 +30,18 @@ public class CamCaptureServer {
 				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()); //
 				PrintWriter pw = new PrintWriter(clientSocket.getOutputStream()) //
 			) {
+				String address = clientSocket.getInetAddress().toString();
+				int port = clientSocket.getPort();
+				System.out.println("Connection " + ++count + " with client " + address + ":" + port);
 				pw.println("CamCapture-Server version 0.0.1-SNAPSHOT");
-				System.out.println("available: " + dis.available());
-				buffer = new byte[dis.available()];
-				System.out.println("buffer: " + buffer.toString());
 				String input;
 				while (null != (input = dis.readUTF())) {
-					System.out.println("Connection " + ++count + " from server " + clientSocket.getInetAddress() + ":"
-							+ clientSocket.getPort());
-					System.out.println("---> " + input);
+					System.out.println("--> " + input);
 					InputStreamReader isr = new InputStreamReader(System.in);
 					BufferedReader br = new BufferedReader(isr);
 					String yes = br.readLine();
 					if ("y".equals(yes) || "j".equals(yes)) {
-						try (FileInputStream fis = new FileInputStream(file)) {
+						try (FileInputStream fis = new FileInputStream(new File("test.jpg"))) {
 							byte[] buffer = new byte[fis.available()];
 							fis.read(buffer);
 							oos.writeObject(buffer);
@@ -53,11 +50,8 @@ public class CamCaptureServer {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-
 			}
 		}
-
-		private byte[] buffer;
 
 		private int count = 0;
 	}
