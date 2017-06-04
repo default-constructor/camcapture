@@ -1,4 +1,5 @@
 server.properties
+server-test.properties
 .classpath
 .project
 /.settings
