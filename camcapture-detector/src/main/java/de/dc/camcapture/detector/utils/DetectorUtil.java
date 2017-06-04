@@ -18,6 +18,19 @@ public final class DetectorUtil {
 
 	private static final Logger LOG = LoggerFactory.getLogger(DetectorUtil.class);
 
+	/**
+	 * Formats the given <code>LocalDateTime</code> object to the given form.
+	 * 
+	 * @param dateTime
+	 *            LocalDateTime
+	 * @param pattern
+	 *            String
+	 * @return the formatted <code>LocalDateTime</code>
+	 */
+	public static String format(LocalDateTime dateTime, String pattern) {
+		return dateTime.format(DateTimeFormatter.ofPattern(pattern));
+	}
+
 	private static final Properties PROPS = new Properties();
 
 	/**
@@ -62,16 +75,7 @@ public final class DetectorUtil {
 		}, millis);
 	}
 
-	/**
-	 * Formats the given <code>LocalDateTime</code> object to the given form.
-	 * 
-	 * @param dateTime
-	 *            LocalDateTime
-	 * @param pattern
-	 *            String
-	 * @return the formatted <code>LocalDateTime</code>
-	 */
-	public static String format(LocalDateTime dateTime, String pattern) {
-		return dateTime.format(DateTimeFormatter.ofPattern(pattern));
+	public DetectorUtil() {
+		// nothing to do...
 	}
 }
