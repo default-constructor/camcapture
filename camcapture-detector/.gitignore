@@ -1,4 +1,5 @@
 detector.properties
+detector-test.properties
 .classpath
 .project
 /.settings
