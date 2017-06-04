@@ -1,16 +1,20 @@
 package de.dc.camcapture.server;
 
-import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Properties;
 
 /**
@@ -35,15 +39,27 @@ public class CamCaptureServer {
 				String input;
 				while (null != (input = dis.readUTF())) {
 					System.out.println("--> " + input);
-					try (FileInputStream fis = new FileInputStream(new File("test.jpg"))) {
-						InputStreamReader isr = new InputStreamReader(System.in);
-						BufferedReader br = new BufferedReader(isr);
-						String yes = br.readLine();
-						if ("y".equals(yes) || "j".equals(yes)) {
-							byte[] buffer = new byte[fis.available()];
-							fis.read(buffer);
-							oos.writeObject(buffer);
-							oos.flush();
+					WatchService watcher = FileSystems.getDefault().newWatchService();
+					String dir = PROPS.getProperty("watcher.dir");
+					Path path = Paths.get(dir);
+					WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+					WATCH_LOOP: while (true) {
+						for (WatchEvent<?> event : key.pollEvents()) {
+							System.out.println(event.kind());
+							if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
+								// Waiting 1 sec till file is finished written
+								sleep(1000L);
+								String filename = ((Path) event.context()).toFile().getName();
+								File file = new File(dir, filename);
+								System.out.println(file);
+								try (FileInputStream fis = new FileInputStream(file)) {
+									byte[] buffer = new byte[fis.available()];
+									System.out.println("buffer size: " + buffer.length);
+									fis.read(buffer);
+									oos.writeObject(buffer);
+								}
+								break WATCH_LOOP;
+							}
 						}
 					}
 				}
@@ -56,17 +72,21 @@ public class CamCaptureServer {
 		private int count = 0;
 	}
 
-	public static void main(String[] args) {
-		System.out.println("starting http tunnel server...");
+	private static final Properties PROPS = new Properties();
+
+	static {
 		try (InputStream is = CamCaptureServer.class.getClassLoader().getResourceAsStream("server.properties")) {
-			Properties props = new Properties();
-			props.load(is);
-			int port = Integer.parseInt(props.getProperty("server.port"));
-			CamCaptureServer server = new CamCaptureServer(port);
-			server.start();
+			PROPS.load(is);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public static void main(String[] args) {
+		System.out.println("starting cam-capture-server...");
+		int port = Integer.parseInt(PROPS.getProperty("server.port"));
+		CamCaptureServer server = new CamCaptureServer(port);
+		server.start();
 	}
 
 	private final int port;
@@ -78,5 +98,13 @@ public class CamCaptureServer {
 	private void start() {
 		Thread serverThread = new Thread(new SocketServerThread());
 		serverThread.start();
+	}
+
+	private void sleep(long millis) {
+		try {
+			Thread.sleep(millis);
+		} catch (InterruptedException e) {
+			// nothing to do...
+		}
 	}
 }
