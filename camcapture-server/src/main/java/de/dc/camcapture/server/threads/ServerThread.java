@@ -30,7 +30,6 @@ public class ServerThread implements Runnable {
 
 	@Override
 	public void run() {
-		LOG.info("Started [{}] [{}]", ServerThread.class.getSimpleName(), port);
 		try ( //
 			ServerSocket serverSocket = new ServerSocket(port); //
 			Socket clientSocket = serverSocket.accept(); //
@@ -39,15 +38,12 @@ public class ServerThread implements Runnable {
 		) {
 			String clientAddress = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
 			LOG.info("Connected [{}] [{}]", clientAddress, ++count);
-			String dir = ServerUtil.getProperty("watcher.dir");
+			String dir = ServerUtil.getProperty("detector.dir");
 			Path path = Paths.get(dir);
 			WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
 			String input;
 			while (null != (input = dis.readUTF())) {
-				if (!ServerUtil.validateToken(input)) {
-					LOG.error("Access denied [{}]", clientAddress);
-					throw new IllegalArgumentException("Invalid token");
-				}
+				ServerUtil.validateToken(clientAddress, input);
 				LOG.info("Verified [{}]", clientAddress);
 				Tuple<String, File> fileTuple = watchIncomingFile(dir, key);
 				String filename = fileTuple.x;
@@ -70,6 +66,19 @@ public class ServerThread implements Runnable {
 
 	private final WatchService watcher;
 
+	private int count = 0;
+
+	private final int port;
+
+	public ServerThread(int port) {
+		this.port = port;
+		try {
+			watcher = FileSystems.getDefault().newWatchService();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	private Tuple<String, File> watchIncomingFile(String dir, WatchKey key) {
 		while (true) {
 			for (WatchEvent<?> event : key.pollEvents()) {
@@ -82,19 +91,6 @@ public class ServerThread implements Runnable {
 					return new Tuple<String, File>(filename, file);
 				}
 			}
-		}
-	}
-
-	private int count = 0;
-
-	private final int port;
-
-	public ServerThread(int port) {
-		this.port = port;
-		try {
-			watcher = FileSystems.getDefault().newWatchService();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
 		}
 	}
 }

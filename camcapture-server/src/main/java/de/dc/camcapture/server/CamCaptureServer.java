@@ -20,7 +20,7 @@ public class CamCaptureServer {
 	}
 
 	private void start(int port) {
-		LOG.info("Starting [{}]", CamCaptureServer.class.getSimpleName());
+		LOG.info("Starting [{}] [{}]", CamCaptureServer.class.getSimpleName(), port);
 		Thread serverThread = new Thread(new ServerThread(port));
 		serverThread.start();
 	}

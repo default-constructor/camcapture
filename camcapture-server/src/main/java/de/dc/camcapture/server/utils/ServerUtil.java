@@ -34,8 +34,7 @@ public final class ServerUtil {
 			}
 			return PROPS.getProperty(key);
 		} catch (IOException e) {
-			LOG.error("Cannot load server properties");
-			throw new RuntimeException("Cannot load server properties");
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -82,9 +81,12 @@ public final class ServerUtil {
 	 *            String
 	 * @return if the token is valid
 	 */
-	public static boolean validateToken(String token) {
+	public static void validateToken(String address, String token) {
 		String serverToken = PROPS.getProperty("server.token");
-		return hash(serverToken).equals(token);
+		if (!token.equals(hash(serverToken))) {
+			LOG.error("Access denied [{}]", address);
+			throw new IllegalArgumentException("Invalid token");
+		}
 	}
 
 	private ServerUtil() {
