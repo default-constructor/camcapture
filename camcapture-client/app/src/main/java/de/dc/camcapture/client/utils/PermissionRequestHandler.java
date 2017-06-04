@@ -31,11 +31,13 @@ public class PermissionRequestHandler {
         Log.d(TAG, "check permissions");
         int checkAccessNetworkState = checkSelfPermission(context, Manifest.permission.ACCESS_NETWORK_STATE);
         int checkInternet = checkSelfPermission(context, Manifest.permission.INTERNET);
+        int checkRead = checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE);
         int checkWrite = checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        if (!(PERMISSION_GRANTED == (checkAccessNetworkState | checkInternet | checkWrite))) {
+        if (!(PERMISSION_GRANTED == (checkAccessNetworkState | checkInternet | checkRead | checkWrite))) {
             String[] permissions = new String[]{
                     Manifest.permission.ACCESS_NETWORK_STATE,
                     Manifest.permission.INTERNET,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
             };
             context.requestPermissions(permissions, PERMISSION_REQUEST_SAVE_IMAGE);
@@ -47,7 +49,7 @@ public class PermissionRequestHandler {
         switch (requestCode) {
             case PERMISSION_REQUEST_SAVE_IMAGE:
                 Log.d(TAG, "permission request save image");
-                LoggerUtil.logPermissions(TAG, permissions);
+                ClientUtil.logPermissions(TAG, permissions);
                 permissionGranted = Arrays.stream(grantResults)
                         .allMatch(grantResult -> PERMISSION_GRANTED == grantResult);
                 break;

@@ -1,6 +1,5 @@
 package de.dc.camcapture.client;
 
-import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.media.MediaScannerConnection;
 import android.os.AsyncTask;
@@ -9,6 +8,7 @@ import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
@@ -20,11 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Properties;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
+import de.dc.camcapture.client.utils.ClientUtil;
 import de.dc.camcapture.client.utils.PermissionRequestHandler;
 
 /**
@@ -43,30 +42,29 @@ public class MainActivity extends AppCompatActivity {
                 String serverAddress = socket.getInetAddress().toString();
                 int serverPort = socket.getPort();
                 Log.i(TAG, "Connection " + ++count + " with server " + serverAddress + ":" + serverPort);
-                try {
-                    String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-                    dos.writeUTF("camcapture-client version " + version);
-                } catch (PackageManager.NameNotFoundException e) {
-                    Log.e(TAG, "Cannot read version", e);
-                }
-                try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+                try (InputStream is = socket.getInputStream();
+                    ObjectInputStream ois = new ObjectInputStream(is)
+                ) {
                     while (true) {
-                        buffer = (byte[]) ois.readObject();
-                        Log.d(TAG, "buffer size: " + buffer.length);
-                        if (0 == buffer.length) {
-                            dos.writeUTF("you sent me bullshit!");
+                        String token = ClientUtil.getProperty("server.token", assetManager);
+                        dos.writeUTF(ClientUtil.hashByMD5(token));
+                        byte[] bufferFilename = (byte[]) ois.readObject();
+                        bufferContent = (byte[]) ois.readObject();
+                        String filename = new String(bufferFilename, StandardCharsets.UTF_8);
+                        Log.d(TAG, "bufferContent size: " + bufferContent.length);
+                        if (0 == bufferContent.length) {
+                            Log.e(TAG, "Response without content [" + filename + "]");
                             continue;
                         }
-                        saveImage(buffer);
-                        dos.writeUTF("thank you!");
+                        saveImage(filename, bufferContent);
                     }
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             } catch (IOException e) {
-                Log.e(TAG, "Connection to server failed. Next try in 30 seconds.", e);
+                Log.e(TAG, "Connection to server failed. Next try in 15 seconds.");
                 try {
-                    TimeUnit.SECONDS.sleep(30);
+                    TimeUnit.SECONDS.sleep(15);
                 } catch (InterruptedException e1) {
                     // nothing to do...
                 }
@@ -75,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
 
-        private byte[] buffer;
+        private byte[] bufferContent;
 
         private int count = 0;
 
@@ -108,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "on create");
+        assetManager = getAssets();
         permissionRequestHandler.checkPermissions();
         if (!isExternalStorageWritable()) {
             // TODO: error handling
@@ -118,7 +117,12 @@ public class MainActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_main);
         button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(v -> startConnection());
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MainActivity.this.startConnection();
+            }
+        });
         super.onCreate(savedInstanceState);
     }
 
@@ -204,6 +208,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ClientTask clientTask;
 
+    private AssetManager assetManager;
+
     private final PermissionRequestHandler permissionRequestHandler;
 
     public MainActivity() {
@@ -225,35 +231,27 @@ public class MainActivity extends AppCompatActivity {
         return Environment.MEDIA_MOUNTED.equals(state);
     }
 
-    private void saveImage(byte[] bytes) {
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String filename = timestamp + ".jpg";
-        File imageFile = new File(DIRECTORY, filename);
-        try (FileOutputStream fos = new FileOutputStream(imageFile)) {
+    private void saveImage(String filename, byte[] bytes) {
+        Log.d(TAG, "filename: " + filename);
+        File file = new File(DIRECTORY, filename);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(bytes);
             fos.flush();
-            MediaScannerConnection.scanFile(this, new String[]{imageFile.toString()}, null, null);
-            Log.i(TAG, "Saved image " + imageFile.toString());
+            MediaScannerConnection.scanFile(this, new String[]{file.toString()}, null, null);
+            Log.i(TAG, "Saved image " + file.toString());
         } catch (FileNotFoundException e) {
+            Log.d(TAG, "file not found exception");
             e.printStackTrace();
         } catch (IOException e) {
+            Log.d(TAG, "input output exception");
             e.printStackTrace();
         }
     }
 
     private void startConnection() {
-        AssetManager assetMgr = getAssets();
-        try (InputStream is = assetMgr.open("client.properties")) {
-            Properties props = new Properties();
-            props.load(is);
-            String hostname = props.getProperty("server.hostname");
-            int port = Integer.parseInt(props.getProperty("server.port"));
-            Log.i(TAG, "Connecting to " + hostname + ":" + port);
-            executeClientTask(hostname, port);
-        } catch (IOException e) {
-            String msg = "Can't load client properties";
-            Log.e(TAG, msg);
-            throw new RuntimeException(msg, e);
-        }
+        String hostname = ClientUtil.getProperty("server.hostname", assetManager);
+        int port = Integer.parseInt(ClientUtil.getProperty("server.port", assetManager));
+        Log.i(TAG, "Connecting to " + hostname + ":" + port);
+        executeClientTask(hostname, port);
     }
 }
