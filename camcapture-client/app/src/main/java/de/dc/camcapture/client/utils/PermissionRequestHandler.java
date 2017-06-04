@@ -1,4 +1,4 @@
-package de.dc.camcapture_client.utils;
+package de.dc.camcapture.client.utils;
 
 import android.Manifest;
 import android.app.Activity;

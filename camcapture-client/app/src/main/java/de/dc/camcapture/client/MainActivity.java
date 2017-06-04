@@ -1,4 +1,4 @@
-package de.dc.camcapture_client;
+package de.dc.camcapture.client;
 
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -25,8 +25,11 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import de.dc.camcapture_client.utils.PermissionRequestHandler;
+import de.dc.camcapture.client.utils.PermissionRequestHandler;
 
+/**
+ * @author Thomas Reno
+ */
 public class MainActivity extends AppCompatActivity {
 
     private class ClientTask extends AsyncTask<Void, Void, Void> {
@@ -49,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
                 try (ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
                     while (true) {
                         buffer = (byte[]) ois.readObject();
+                        Log.d(TAG, "buffer size: " + buffer.length);
                         if (0 == buffer.length) {
                             dos.writeUTF("you sent me bullshit!");
                             continue;
