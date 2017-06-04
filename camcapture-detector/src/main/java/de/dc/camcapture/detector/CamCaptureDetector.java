@@ -162,7 +162,7 @@ public class CamCaptureDetector implements Runnable {
 	}
 
 	private void saveImage(File file, BufferedImage image) {
-		LOG.info("Saving [{}]", file);
+		LOG.debug("Saving [{}]", file);
 		try {
 			ImageIO.write(image, "jpg", file);
 		} catch (IOException e) {
