@@ -39,6 +39,13 @@ public final class ServerUtil {
 		}
 	}
 
+	/**
+	 * Hashes a string by the MD5 algorithm.
+	 * 
+	 * @param string
+	 *            String
+	 * @return the hashed string
+	 */
 	public static String hash(String string) {
 		try {
 			MessageDigest md = MessageDigest.getInstance("MD5");
@@ -68,12 +75,19 @@ public final class ServerUtil {
 		}
 	}
 
-	private ServerUtil() {
-		// nothing to do...
-	}
-
-	public static boolean checkToken(String token) {
+	/**
+	 * Validates the given token, if its equals the server token.
+	 * 
+	 * @param token
+	 *            String
+	 * @return if the token is valid
+	 */
+	public static boolean validateToken(String token) {
 		String serverToken = PROPS.getProperty("server.token");
 		return hash(serverToken).equals(token);
+	}
+
+	private ServerUtil() {
+		// nothing to do...
 	}
 }
