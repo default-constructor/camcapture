@@ -29,45 +29,51 @@ public class ServerThread implements Runnable {
 
 	@Override
 	public void run() {
-		LOG.info("Starting [{}] [{}]", ServerThread.class.getSimpleName(), port);
+		LOG.info("Started [{}] [{}]", ServerThread.class.getSimpleName(), port);
 		try ( //
-			ServerSocket serverSocket = new ServerSocket(port); //
-			Socket clientSocket = serverSocket.accept(); //
-			DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
-			ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
+				ServerSocket serverSocket = new ServerSocket(port); //
+				Socket clientSocket = serverSocket.accept(); //
+				DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
+				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
 		) {
-			String clientAddress = clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort();
-			LOG.info("Connection [{}] [{}]", ++count, clientAddress);
+			String clientAddress = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+			LOG.info("Connected [{}] [{}]", clientAddress, ++count);
+			WatchService watcher = FileSystems.getDefault().newWatchService();
+			String dir = ServerUtil.getProperty("watcher.dir");
+			Path path = Paths.get(dir);
+			WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
 			String input;
 			while (null != (input = dis.readUTF())) {
-				LOG.info("Message [{}]", input);
-				WatchService watcher = FileSystems.getDefault().newWatchService();
-				String dir = ServerUtil.getProperty("watcher.dir");
-				Path path = Paths.get(dir);
-				WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+				if (!ServerUtil.checkToken(input)) {
+					LOG.error("Access denied [{}]", clientAddress);
+					throw new IllegalArgumentException("Invalid token");
+				}
+				LOG.info("Verified [{}]", clientAddress);
 				WATCH_LOOP: while (true) {
 					for (WatchEvent<?> event : key.pollEvents()) {
 						if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
 							String filename = ((Path) event.context()).toFile().getName();
 							File file = new File(dir, filename);
-							LOG.info("Detection [{}]", file);
+							LOG.info("Detected [{}]", file);
 							// Waiting 1 sec so the file can be finished written
 							ServerUtil.sleep(1000L);
 							try (FileInputStream fis = new FileInputStream(file)) {
+								oos.writeObject(filename.getBytes());
 								byte[] buffer = new byte[fis.available()];
-								LOG.debug("buffer size {}", buffer.length);
 								fis.read(buffer);
 								oos.writeObject(buffer);
-								LOG.info("Image sent [{}]", clientAddress);
+								LOG.info("Pushed [{}] [{}]", filename, clientAddress);
 							}
 							break WATCH_LOOP;
 						}
 					}
 				}
 			}
-		} catch (IOException e) {
-			System.err.println("Connection failed");
-			e.printStackTrace();
+		} catch (IOException | IllegalArgumentException e) {
+			LOG.error("An error has occured [{}]", e.getMessage(), e);
+			// Waiting 10 sec so the server can cool down
+			ServerUtil.sleep(10000L);
+			run();
 		}
 	}
 
