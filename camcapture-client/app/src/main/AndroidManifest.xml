@@ -3,9 +3,7 @@
     package="de.dc.camcapture.client">
 
     <uses-sdk
-        android:maxSdkVersion="25"
-        android:minSdkVersion="25"
-        android:targetSdkVersion="25" />
+        android:maxSdkVersion="25" />
 
     <application
         android:allowBackup="true"
@@ -18,6 +16,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".PictureViewActivity">
+            <intent-filter>
+                <action android:name="picture_view" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
     </application>

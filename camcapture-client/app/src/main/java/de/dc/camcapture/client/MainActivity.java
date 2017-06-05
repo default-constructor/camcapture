@@ -1,16 +1,20 @@
 package de.dc.camcapture.client;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.res.AssetManager;
 import android.media.MediaScannerConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -20,7 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import de.dc.camcapture.client.utils.ClientUtil;
@@ -43,20 +47,21 @@ public class MainActivity extends AppCompatActivity {
                 int serverPort = socket.getPort();
                 Log.i(TAG, "Connection " + ++count + " with server " + serverAddress + ":" + serverPort);
                 try (InputStream is = socket.getInputStream();
-                    ObjectInputStream ois = new ObjectInputStream(is)
+                     ObjectInputStream ois = new ObjectInputStream(is)
                 ) {
                     while (true) {
                         String token = ClientUtil.getProperty("server.token", assetManager);
-                        dos.writeUTF(ClientUtil.hashByMD5(token));
-                        byte[] bufferFilename = (byte[]) ois.readObject();
+                        String hashedToken = ClientUtil.hashByMD5(token);
+                        dos.writeUTF(hashedToken);
+                        long timestamp = ois.readLong();
+                        String filename = ois.readUTF();
                         bufferContent = (byte[]) ois.readObject();
-                        String filename = new String(bufferFilename, StandardCharsets.UTF_8);
-                        Log.d(TAG, "bufferContent size: " + bufferContent.length);
                         if (0 == bufferContent.length) {
                             Log.e(TAG, "Response without content [" + filename + "]");
                             continue;
                         }
                         saveImage(filename, bufferContent);
+                        showNotification(new Date(timestamp));
                     }
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
@@ -203,8 +208,9 @@ public class MainActivity extends AppCompatActivity {
         permissionRequestHandler.handlePermissionsResult(requestCode, permissions, grantResults);
     }
 
-    ImageView imageView;
     Button button;
+
+    private int notificationId = 0;
 
     private ClientTask clientTask;
 
@@ -246,6 +252,26 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "input output exception");
             e.printStackTrace();
         }
+    }
+
+    private void showNotification(Date date) {
+        Intent intent = new Intent(this, PictureViewActivity.class);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.drawable.cam_128)
+                .setContentTitle("CamCapture Detection (" + ClientUtil.convert(date) + ")")
+                .setContentText("Es wurde jemand von der Kamera erfasst.");
+
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        stackBuilder.addParentStack(PictureViewActivity.class);
+        stackBuilder.addNextIntent(intent);
+
+        PendingIntent pendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        builder.setContentIntent(pendingIntent);
+
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        manager.notify(notificationId++, builder.build());
     }
 
     private void startConnection() {

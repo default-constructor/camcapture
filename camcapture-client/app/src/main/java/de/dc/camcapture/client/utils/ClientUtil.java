@@ -1,14 +1,15 @@
 package de.dc.camcapture.client.utils;
 
-import android.content.Context;
 import android.content.res.AssetManager;
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
 
 /**
@@ -17,6 +18,17 @@ import java.util.Properties;
 public final class ClientUtil {
 
     public static final String TAG = ClientUtil.class.getSimpleName();
+
+    /**
+     * Converts the given Date object to a formatted string.
+     *
+     * @param date Date
+     * @return the formatted date string
+     */
+    public static String convert(Date date) {
+        DateFormat formatter = new SimpleDateFormat("dd.MM.yy HH:mm:ss");
+        return formatter.format(date);
+    }
 
     private static final Properties PROPS = new Properties();
 
@@ -40,12 +52,12 @@ public final class ClientUtil {
         }
     }
 
-    public static void logPermissions(String tag, String[] permissions) {
-        for (String permission : permissions) {
-            Log.d(tag, "permission: " + permission);
-        }
-    }
-
+    /**
+     * Hashes a string by the MD5 algorythm.
+     *
+     * @param string String
+     * @return the hashed string
+     */
     public static String hashByMD5(String string) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
