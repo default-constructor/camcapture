@@ -2,5 +2,7 @@ detector.properties
 detector-test.properties
 .classpath
 .project
-/.settings
+/.settings/
+/logs/
+/pictures/
 /target/

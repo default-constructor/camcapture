@@ -20,7 +20,7 @@ public class CamCaptureDetector {
 	}	
 
 	private void start() {
-		LOG.info("Starting [{}]", CamCaptureDetector.class.getSimpleName());
+		LOG.info("Starting {} listening on device {}", CamCaptureDetector.class.getSimpleName(), WEBCAM_DEVICE_INDEX);
 		Thread serverThread = new Thread(new DetectorThread(WEBCAM_DEVICE_INDEX));
 		serverThread.start();
 	}

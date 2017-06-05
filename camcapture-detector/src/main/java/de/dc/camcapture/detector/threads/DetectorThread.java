@@ -132,12 +132,10 @@ public class DetectorThread implements Runnable {
 				if (detectFaces(converterToMat.convert(capturedFrame), new Mat())) {
 					if (!previouslyDetected) {
 						LocalDateTime now = LocalDateTime.now();
-						LOG.info("Detection [{}]", DetectorUtil.format(now, "yyyy-MM-dd HH:mm:ss"));
+						LOG.info("Detected object at {}", DetectorUtil.format(now, "yyyy-MM-dd HH:mm:ss"));
 						String filename = DetectorUtil.format(now, "yyyyMMdd_HHmmss") + ".jpg";
-						File dir = new File(DetectorUtil.getProperty("pictures.dir"));
-						File file = new File(dir, filename);
 						image = frameConverter.convert(capturedFrame);
-						saveImage(file, image);
+						saveSnapshot(filename, image);
 						// After 5 seconds detections going to be saveable again
 						DetectorUtil.schedule(5000L, () -> previouslyDetected = false);
 					}
@@ -211,7 +209,6 @@ public class DetectorThread implements Runnable {
 	}
 
 	private void init() throws IOException {
-		LOG.info("Initializing detector [WIDTH {}px / HEIGHT {}px]", IMAGE_WIDTH, IMAGE_HEIGHT);
 		grabber.setImageWidth(IMAGE_WIDTH);
 		grabber.setImageHeight(IMAGE_HEIGHT);
 		for (Entry<Feature, String> entry : classifierPaths.entrySet()) {
@@ -223,19 +220,21 @@ public class DetectorThread implements Runnable {
 			if (classifier.isNull()) {
 				throw new IOException("Fail on loading cascade classifier");
 			}
-			LOG.info("Loaded cascade classifier [{}] [{}]", feature, path);
 			absoluteFaceSizes.put(feature, 0);
+			LOG.info("Loaded {} cascade classifier from {}", feature, path);
 		}
 		canvas = new CanvasFrame("Capture Preview", CanvasFrame.getDefaultGamma() / grabber.getGamma());
 		canvas.setSize(new Dimension(IMAGE_WIDTH, IMAGE_HEIGHT));
 		canvas.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		LOG.info("Initialed detector with {}px x {}px", IMAGE_WIDTH, IMAGE_HEIGHT);
 	}
 
-	private void saveImage(File file, BufferedImage image) {
-		LOG.debug("Saving [{}]", file);
+	private void saveSnapshot(String filename, BufferedImage snapshot) {
 		try {
+			File file = new File(DetectorUtil.getProperty("pictures.dir"), filename);
 			file.getParentFile().mkdirs();
-			ImageIO.write(image, "jpg", file);
+			ImageIO.write(snapshot, "jpg", file);
+			LOG.info("Saved snapshot {}", filename);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

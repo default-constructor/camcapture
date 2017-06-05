@@ -1,12 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration debug="true">
-	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+	<property name="DEV_HOME" value="./logs" />
+	<property name="PATTERN_OUTPUT"
+		value="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%logger{36}] %msg%n" />
+
+	<appender name="CONSOLE_DEBUG" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
-			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+			<pattern>${PATTERN_OUTPUT}</pattern>
 		</encoder>
 	</appender>
-	<logger name="de.dc.camcapture" level="debug" />
-	<root level="DEBUG">
-		<appender-ref ref="STDOUT" />
+
+	<appender name="FILE_DEBUG"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${DEV_HOME}/debug.log</file>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>${PATTERN_OUTPUT}</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${DEV_HOME}/archived/debug.%d{yyyy-MM-dd}.%i.log
+			</fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>10MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+		</rollingPolicy>
+	</appender>
+
+	<appender name="FILE_ERROR"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${DEV_HOME}/error.log</file>
+		<filter class="ch.qos.logback.classic.filter.LevelFilter">
+			<level>ERROR</level>
+			<onMatch>ACCEPT</onMatch>
+			<onMismatch>DENY</onMismatch>
+		</filter>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<pattern>${PATTERN_OUTPUT}</pattern>
+		</encoder>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${DEV_HOME}/archived/error.%d{yyyy-MM-dd}.%i.log
+			</fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>10MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+		</rollingPolicy>
+	</appender>
+
+	<logger name="de.dc.camcapture" level="debug" additivity="false">
+		<appender-ref ref="FILE_DEBUG" />
+		<appender-ref ref="CONSOLE_DEBUG" />
+		<appender-ref ref="FILE_ERROR" />
+	</logger>
+
+	<root level="error">
+		<appender-ref ref="FILE_ERROR" />
 	</root>
+
 </configuration>
