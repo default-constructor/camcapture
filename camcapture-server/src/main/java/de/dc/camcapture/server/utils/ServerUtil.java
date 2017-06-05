@@ -45,8 +45,8 @@ public final class ServerUtil {
 	 *            String
 	 * @return the milliseconds
 	 */
-	public static long getMillis(LocalDateTime dateTime, String zone) {
-		ZonedDateTime zdt = dateTime.atZone(ZoneId.of(zone));
+	public static long getMillis(LocalDateTime dateTime) {
+		ZonedDateTime zdt = dateTime.atZone(ZoneId.of(System.getProperty("user.timezone")));
 		return zdt.toInstant().toEpochMilli();
 	}
 

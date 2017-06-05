@@ -32,16 +32,17 @@ public class ServerThread implements Runnable {
 	@Override
 	public void run() {
 		try ( //
-				ServerSocket serverSocket = new ServerSocket(port); //
-				Socket clientSocket = serverSocket.accept(); //
-				DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
-				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
+			ServerSocket serverSocket = new ServerSocket(port); //
+			Socket clientSocket = serverSocket.accept(); //
+			DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
+			ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
 		) {
 			String address = clientSocket.getInetAddress().getHostAddress();
 			LOG.info("Connected to {}", address);
-			String dir = ServerUtil.getProperty("detector.dir");
-			Path path = Paths.get(dir);
-			WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+			String defaultPath = System.getProperty("user.home") + "/CamCapture/Pictures";
+			String path = System.getenv("CAMCAPTURE_PICTURES");
+			String dir = null != path ? path : defaultPath;
+			WatchKey key = Paths.get(dir).register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
 			String input;
 			while (null != (input = dis.readUTF())) {
 				ServerUtil.validateToken(address, input);
@@ -51,7 +52,7 @@ public class ServerThread implements Runnable {
 				File file = fileTuple.right;
 				String string = filename.substring(0, filename.indexOf("."));
 				LocalDateTime dateTime = ServerUtil.getDateTime(string, "yyyyMMdd_HHmmss");
-				long timestamp = ServerUtil.getMillis(dateTime, "Europe/Berlin");
+				long timestamp = ServerUtil.getMillis(dateTime);
 				try (FileInputStream fis = new FileInputStream(file)) {
 					byte[] buffer = new byte[fis.available()];
 					fis.read(buffer);
