@@ -49,7 +49,6 @@ public class PermissionRequestHandler {
         switch (requestCode) {
             case PERMISSION_REQUEST_SAVE_IMAGE:
                 Log.d(TAG, "permission request save image");
-                ClientUtil.logPermissions(TAG, permissions);
                 permissionGranted = Arrays.stream(grantResults)
                         .allMatch(grantResult -> PERMISSION_GRANTED == grantResult);
                 break;
