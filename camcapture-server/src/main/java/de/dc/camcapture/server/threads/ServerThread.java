@@ -14,6 +14,7 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,33 +32,37 @@ public class ServerThread implements Runnable {
 	@Override
 	public void run() {
 		try ( //
-			ServerSocket serverSocket = new ServerSocket(port); //
-			Socket clientSocket = serverSocket.accept(); //
-			DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
-			ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
+				ServerSocket serverSocket = new ServerSocket(port); //
+				Socket clientSocket = serverSocket.accept(); //
+				DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
+				ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
 		) {
-			String clientAddress = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
-			LOG.info("Connected [{}] [{}]", clientAddress, ++count);
+			String address = clientSocket.getInetAddress().getHostAddress();
+			LOG.info("Connected to {}", address);
 			String dir = ServerUtil.getProperty("detector.dir");
 			Path path = Paths.get(dir);
 			WatchKey key = path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
 			String input;
 			while (null != (input = dis.readUTF())) {
-				ServerUtil.validateToken(clientAddress, input);
-				LOG.info("Verified [{}]", clientAddress);
+				ServerUtil.validateToken(address, input);
+				LOG.info("Verified token from {}", address);
 				Tuple<String, File> fileTuple = watchIncomingFile(dir, key);
-				String filename = fileTuple.x;
-				File file = fileTuple.y;
+				String filename = fileTuple.left;
+				File file = fileTuple.right;
+				String string = filename.substring(0, filename.indexOf("."));
+				LocalDateTime dateTime = ServerUtil.getDateTime(string, "yyyyMMdd_HHmmss");
+				long timestamp = ServerUtil.getMillis(dateTime, "Europe/Berlin");
 				try (FileInputStream fis = new FileInputStream(file)) {
-					oos.writeObject(filename.getBytes());
 					byte[] buffer = new byte[fis.available()];
 					fis.read(buffer);
+					oos.writeLong(timestamp);
+					oos.writeUTF(filename);
 					oos.writeObject(buffer);
-					LOG.info("Pushed [{}] [{}]", filename, clientAddress);
+					LOG.info("Pushed image {} to {}", filename, address);
 				}
 			}
 		} catch (IOException | IllegalArgumentException e) {
-			LOG.error("An error has occured [{}]", e.getMessage(), e);
+			LOG.error(e.getMessage(), e);
 			// Waiting 10 sec so the server can cool down
 			ServerUtil.sleep(10000L);
 			run();
@@ -65,8 +70,6 @@ public class ServerThread implements Runnable {
 	}
 
 	private final WatchService watcher;
-
-	private int count = 0;
 
 	private final int port;
 
@@ -87,7 +90,7 @@ public class ServerThread implements Runnable {
 					ServerUtil.sleep(1000L);
 					String filename = ((Path) event.context()).toFile().getName();
 					File file = new File(dir, filename);
-					LOG.info("Detected [{}]", file);
+					LOG.info("Detected file {}", filename);
 					return new Tuple<String, File>(filename, file);
 				}
 			}

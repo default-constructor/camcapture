@@ -2,5 +2,6 @@ server.properties
 server-test.properties
 .classpath
 .project
-/.settings
+/.settings/
+/logs/
 /target/

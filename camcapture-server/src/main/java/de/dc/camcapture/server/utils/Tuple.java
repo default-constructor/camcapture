@@ -3,13 +3,13 @@ package de.dc.camcapture.server.utils;
 /**
  * @author Thomas Reno
  */
-public class Tuple<X, Y> {
+public class Tuple<L, R> {
 
-	public final X x;
-	public final Y y;
+	public final L left;
+	public final R right;
 
-	public Tuple(X x, Y y) {
-		this.x = x;
-		this.y = y;
+	public Tuple(L left, R right) {
+		this.left = left;
+		this.right = right;
 	}
 }

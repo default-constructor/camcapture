@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -15,6 +19,36 @@ import org.slf4j.LoggerFactory;
 public final class ServerUtil {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ServerUtil.class);
+
+	/**
+	 * Gets a <code>LocalDateTime</code> object from the given string of the
+	 * given pattern.
+	 * 
+	 * @param dateTime
+	 *            String
+	 * @param pattern
+	 *            String
+	 * @return the <code>LocalDateTime</code> object
+	 */
+	public static LocalDateTime getDateTime(String dateTime, String pattern) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		return LocalDateTime.parse(dateTime, formatter);
+	}
+
+	/**
+	 * Gets the milliseconds of the given <code>LocalDateTime</code> object in
+	 * the given time zone.
+	 * 
+	 * @param dateTime
+	 *            LocalDateTime
+	 * @param zone
+	 *            String
+	 * @return the milliseconds
+	 */
+	public static long getMillis(LocalDateTime dateTime, String zone) {
+		ZonedDateTime zdt = dateTime.atZone(ZoneId.of(zone));
+		return zdt.toInstant().toEpochMilli();
+	}
 
 	private static final Properties PROPS = new Properties();
 
