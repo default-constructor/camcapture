@@ -48,9 +48,6 @@ public class DetectorThread implements Runnable {
 
 	private static final Logger LOG = LoggerFactory.getLogger(DetectorThread.class);
 
-	private static final int IMAGE_WIDTH = 640;
-	private static final int IMAGE_HEIGHT = 360;
-
 	private static final String HAARCASCADE_PATH = "/cascades/haar";
 	/** Face cascades */
 	@SuppressWarnings("unused")
@@ -95,7 +92,7 @@ public class DetectorThread implements Runnable {
 			HAARCASCADE_PATH + "/haarcascade_upperbody.xml";
 
 	private static HashMap<Feature, String> classifierPaths = new HashMap<>();
-	
+
 	static {
 		// classifierPaths.put(Feature.FRONTALFACE,
 		// HAARCASCADE_EYE_TREE_EYEGLASSES_PATH);
@@ -165,9 +162,15 @@ public class DetectorThread implements Runnable {
 	private final HashMap<Feature, Integer> absoluteFaceSizes = new HashMap<>();
 
 	private final OpenCVFrameGrabber grabber;
-	
-	public DetectorThread(int camIndex) {
+	private final File directory;
+	private final int width;
+	private final int height;
+
+	public DetectorThread(int camIndex, int width, int height, File directory) {
 		grabber = new OpenCVFrameGrabber(camIndex);
+		this.directory = directory;
+		this.width = width;
+		this.height = height;
 		try {
 			init();
 		} catch (IOException e) {
@@ -209,8 +212,8 @@ public class DetectorThread implements Runnable {
 	}
 
 	private void init() throws IOException {
-		grabber.setImageWidth(IMAGE_WIDTH);
-		grabber.setImageHeight(IMAGE_HEIGHT);
+		grabber.setImageWidth(width);
+		grabber.setImageHeight(height);
 		for (Entry<Feature, String> entry : classifierPaths.entrySet()) {
 			String path = entry.getValue();
 			Feature feature = entry.getKey();
@@ -224,17 +227,14 @@ public class DetectorThread implements Runnable {
 			LOG.info("Loaded {} cascade classifier from {}", feature, path);
 		}
 		canvas = new CanvasFrame("Capture Preview", CanvasFrame.getDefaultGamma() / grabber.getGamma());
-		canvas.setSize(new Dimension(IMAGE_WIDTH, IMAGE_HEIGHT));
+		canvas.setSize(new Dimension(width, height));
 		canvas.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		LOG.info("Initialed detector with {}px x {}px", IMAGE_WIDTH, IMAGE_HEIGHT);
+		LOG.info("Initialized detector with {}px x {}px", width, height);
 	}
 
 	private void saveSnapshot(String filename, BufferedImage snapshot) {
 		try {
-			String defaultPath = System.getProperty("user.home") + "/CamCapture/Pictures";
-			String path = System.getenv("CAMCAPTURE_PICTURES");
-			File file = new File((null != path ? path : defaultPath), filename);
-			file.getParentFile().mkdirs();
+			File file = new File(directory, filename);
 			ImageIO.write(snapshot, "jpg", file);
 			LOG.info("Saved snapshot {}", filename);
 		} catch (IOException e) {
