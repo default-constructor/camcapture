@@ -231,7 +231,9 @@ public class DetectorThread implements Runnable {
 
 	private void saveSnapshot(String filename, BufferedImage snapshot) {
 		try {
-			File file = new File(DetectorUtil.getProperty("pictures.dir"), filename);
+			String defaultPath = System.getProperty("user.home") + "/CamCapture/Pictures";
+			String path = System.getenv("CAMCAPTURE_PICTURES");
+			File file = new File((null != path ? path : defaultPath), filename);
 			file.getParentFile().mkdirs();
 			ImageIO.write(snapshot, "jpg", file);
 			LOG.info("Saved snapshot {}", filename);
