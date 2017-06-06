@@ -1,4 +1,4 @@
-package de.dc.camcapture.client;
+package de.dc.camcapture.client.activities;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -24,9 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import de.dc.camcapture.client.R;
 import de.dc.camcapture.client.utils.ClientUtil;
 import de.dc.camcapture.client.utils.PermissionRequestHandler;
 
@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
                 ) {
                     while (true) {
                         String token = ClientUtil.getProperty("server.token", assetManager);
-                        String hashedToken = ClientUtil.hashByMD5(token);
+                        String hashedToken = ClientUtil.hash(token);
                         dos.writeUTF(hashedToken);
                         long timestamp = ois.readLong();
                         String filename = ois.readUTF();
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
                             continue;
                         }
                         saveImage(filename, bufferContent);
-                        showNotification(new Date(timestamp));
+                        showNotification(timestamp, filename);
                     }
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         Log.d(TAG, "on create");
         assetManager = getAssets();
         permissionRequestHandler.checkPermissions();
@@ -128,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.this.startConnection();
             }
         });
-        super.onCreate(savedInstanceState);
     }
 
     /**
@@ -137,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onRestart() {
-        Log.d(TAG, "on restart");
         super.onRestart();
     }
 
@@ -147,7 +146,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onStart() {
-        Log.d(TAG, "on start");
         super.onStart();
     }
 
@@ -157,7 +155,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onResume() {
-        Log.d(TAG, "on resume");
         super.onResume();
     }
 
@@ -171,7 +168,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onPause() {
-        Log.d(TAG, "on pause");
         super.onPause();
     }
 
@@ -185,7 +181,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onStop() {
-        Log.d(TAG, "on stop");
         super.onStop();
     }
 
@@ -197,7 +192,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "on destroy");
         super.onDestroy();
     }
 
@@ -208,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
         permissionRequestHandler.handlePermissionsResult(requestCode, permissions, grantResults);
     }
 
-    Button button;
+    private Button button;
 
     private int notificationId = 0;
 
@@ -254,13 +248,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showNotification(Date date) {
+    private void showNotification(long timestamp, String filename) {
         Intent intent = new Intent(this, PictureViewActivity.class);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.cam_128)
-                .setContentTitle("CamCapture Detection (" + ClientUtil.convert(date) + ")")
-                .setContentText("Es wurde jemand von der Kamera erfasst.");
+        intent.putExtra("image", filename);
 
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addParentStack(PictureViewActivity.class);
@@ -268,7 +258,12 @@ public class MainActivity extends AppCompatActivity {
 
         PendingIntent pendingIntent = stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        builder.setContentIntent(pendingIntent);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.drawable.cam_128)
+                .setContentTitle("CamCapture Detection (" + ClientUtil.getDateTimeForNotification(timestamp) + ")")
+                .setContentText("Es wurde jemand von der Kamera erfasst.")
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
 
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify(notificationId++, builder.build());
