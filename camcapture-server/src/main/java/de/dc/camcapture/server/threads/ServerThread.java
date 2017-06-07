@@ -54,10 +54,10 @@ public class ServerThread implements Runnable, Listener {
 						oos.writeObject(buffer);
 						LOG.info("Pushed picture -> {} {}", filename, address);
 					}
+					// File clearing to enable connectivity check again
+					pictureFile = null;
 				}
 				oos.flush();
-				// File clearing to enable connectivity check again
-				pictureFile = null;
 			}
 		} catch (IOException | IllegalArgumentException e) {
 			LOG.error(e.getMessage(), e);
@@ -69,6 +69,7 @@ public class ServerThread implements Runnable, Listener {
 
 	@Override
 	public void onPictureDetected(PictureFile pictureFile) {
+		LOG.debug("file detected {}", pictureFile);
 		this.pictureFile = pictureFile;
 	}
 

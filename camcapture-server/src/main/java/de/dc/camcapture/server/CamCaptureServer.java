@@ -31,13 +31,13 @@ public class CamCaptureServer {
 	}
 
 	private void start(int serverPort, String watcherDirectory) {
-		LOG.info("Starting {} listening on port {}", CamCaptureServer.class.getSimpleName(), serverPort);
+		LOG.info("Starting {} -> Port {}", CamCaptureServer.class.getSimpleName(), serverPort);
 		ServerThread serverThread = new ServerThread(serverPort);
 		Thread sThread = new Thread(serverThread);
 		sThread.start();
 		WatcherThread watcherThread = new WatcherThread(watcherDirectory);
 		watcherThread.addListener(serverThread);
-		Thread wThread = new Thread();
+		Thread wThread = new Thread(watcherThread);
 		wThread.start();
 	}
 }
