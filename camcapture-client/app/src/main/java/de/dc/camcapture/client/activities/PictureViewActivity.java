@@ -43,7 +43,7 @@ public class PictureViewActivity extends FragmentActivity {
             return "Unbekannt vom " + dateTime;
         }
 
-        public ImageFragmentStatePagerAdapter(FragmentManager fm) {
+        private ImageFragmentStatePagerAdapter(FragmentManager fm) {
             super(fm);
         }
     }
@@ -72,17 +72,10 @@ public class PictureViewActivity extends FragmentActivity {
         setContentView(R.layout.activity_pictureview);
         File pictures = new File(DIRECTORY_NAME);
         files = pictures.listFiles();
-        fragmentStatePagerAdapter = new ImageFragmentStatePagerAdapter(getSupportFragmentManager());
-        viewPager = (ViewPager) findViewById(R.id.viewPager);
+        ImageFragmentStatePagerAdapter fragmentStatePagerAdapter = new ImageFragmentStatePagerAdapter(getSupportFragmentManager());
+        ViewPager viewPager = (ViewPager) findViewById(R.id.viewPager);
         viewPager.setAdapter(fragmentStatePagerAdapter);
         viewPager.setCurrentItem(files.length - 1);
-        filename = getIntent().getExtras().getString("image");
-
+        String filename = getIntent().getExtras().getString("image");
     }
-
-    private ImageFragmentStatePagerAdapter fragmentStatePagerAdapter;
-
-    private ViewPager viewPager;
-
-    private String filename;
 }

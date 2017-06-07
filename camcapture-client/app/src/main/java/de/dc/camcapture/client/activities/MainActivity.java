@@ -23,12 +23,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 
 import de.dc.camcapture.client.R;
-import de.dc.camcapture.client.utils.ClientUtil;
 import de.dc.camcapture.client.utils.PermissionRequestHandler;
+
+import static de.dc.camcapture.client.utils.ClientUtil.*;
 
 /**
  * @author Thomas Reno
@@ -37,23 +40,26 @@ public class MainActivity extends AppCompatActivity {
 
     private class ClientTask extends AsyncTask<Void, Void, Void> {
 
+        private static final String CLIENT_TOKEN = "client.token";
+
         @Override
         protected Void doInBackground(Void... params) {
             Log.d(TAG, "do in background");
-            try (Socket socket = new Socket(hostname, port);
-                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream())
-            ) {
-                String serverAddress = socket.getInetAddress().toString();
-                int serverPort = socket.getPort();
-                Log.i(TAG, "Connection " + ++count + " with server " + serverAddress + ":" + serverPort);
-                try (InputStream is = socket.getInputStream();
+            try (Socket socket = new Socket()) {
+                SocketAddress socketAddress = new InetSocketAddress(hostname, port);
+                socket.connect(socketAddress, 10000);
+                Log.i(TAG, "Connection " + ++count + " with server " + hostname + ":" + port);
+                try (DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                     InputStream is = socket.getInputStream();
                      ObjectInputStream ois = new ObjectInputStream(is)
                 ) {
                     while (true) {
-                        String token = ClientUtil.getProperty("server.token", assetManager);
-                        String hashedToken = ClientUtil.hash(token);
                         dos.writeUTF(hashedToken);
-                        long timestamp = ois.readLong();
+                        dos.flush();
+                        long timestamp;
+                        if (/* Connectivity-check */ -1L == (timestamp = ois.readLong())) {
+                            continue;
+                        }
                         String filename = ois.readUTF();
                         bufferContent = (byte[]) ois.readObject();
                         if (0 == bufferContent.length) {
@@ -67,9 +73,9 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             } catch (IOException e) {
-                Log.e(TAG, "Connection to server failed. Next try in 15 seconds.");
+                Log.e(TAG, "Connection to server failed. Next try in 10 seconds.");
                 try {
-                    TimeUnit.SECONDS.sleep(15);
+                    TimeUnit.SECONDS.sleep(10);
                 } catch (InterruptedException e1) {
                     // nothing to do...
                 }
@@ -84,10 +90,13 @@ public class MainActivity extends AppCompatActivity {
 
         private final String hostname;
         private final int port;
+        private final String hashedToken;
 
         private ClientTask(String hostname, int port) {
             this.hostname = hostname;
             this.port = port;
+            String token = getProperty(CLIENT_TOKEN, assetManager);
+            hashedToken = hash(token);
         }
     }
 
@@ -122,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "Cannot create directory " + DIRECTORY_NAME);
         }
         setContentView(R.layout.activity_main);
-        button = (Button) findViewById(R.id.button);
+        Button button = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -202,8 +211,6 @@ public class MainActivity extends AppCompatActivity {
         permissionRequestHandler.handlePermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private Button button;
-
     private int notificationId = 0;
 
     private ClientTask clientTask;
@@ -260,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
                 .setSmallIcon(R.drawable.cam_128)
-                .setContentTitle("CamCapture Detection (" + ClientUtil.getDateTimeForNotification(timestamp) + ")")
+                .setContentTitle("CamCapture Detection (" + getDateTimeForNotification(timestamp) + ")")
                 .setContentText("Es wurde jemand von der Kamera erfasst.")
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
@@ -270,8 +277,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startConnection() {
-        String hostname = ClientUtil.getProperty("server.hostname", assetManager);
-        int port = Integer.parseInt(ClientUtil.getProperty("server.port", assetManager));
+        String hostname = getProperty("server.hostname", assetManager);
+        int port = Integer.parseInt(getProperty("server.port", assetManager));
         Log.i(TAG, "Connecting to " + hostname + ":" + port);
         executeClientTask(hostname, port);
     }
