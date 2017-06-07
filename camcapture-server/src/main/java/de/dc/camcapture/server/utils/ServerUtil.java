@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -33,6 +34,11 @@ public final class ServerUtil {
 	public static LocalDateTime getDateTime(String dateTime, String pattern) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
 		return LocalDateTime.parse(dateTime, formatter);
+	}
+
+	public static String getDateTime(long timestamp, String pattern) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		return formatter.format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime());
 	}
 
 	/**

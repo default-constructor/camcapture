@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.dc.camcapture.server.threads.ServerThread;
+import de.dc.camcapture.server.threads.WatcherThread;
 import de.dc.camcapture.server.utils.ServerUtil;
 
 /**
@@ -12,16 +13,31 @@ import de.dc.camcapture.server.utils.ServerUtil;
 public class CamCaptureServer {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CamCaptureServer.class);
+	
+	private static final String VARIABLE_USERHOME = "user.home";
+	private static final String VARIABLE_PICTURES = "camcapture.pictures";
+	
+	private static final String KEY_SERVERPORT = "server.port";
+
+	private static final String PATH_PICTURES = "/CamCapture/Pictures";
+	private static final String PATH_PICTURES_DEFAULT = System.getProperty(VARIABLE_USERHOME) + PATH_PICTURES;
 
 	public static void main(String[] args) {
-		int port = Integer.parseInt(ServerUtil.getProperty("server.port"));
+		int port = Integer.parseInt(ServerUtil.getProperty(KEY_SERVERPORT));
+		String path = System.getenv(VARIABLE_PICTURES);
+		String directory = null != path ? path : PATH_PICTURES_DEFAULT;
 		CamCaptureServer server = new CamCaptureServer();
-		server.start(port);
+		server.start(port, directory);
 	}
 
-	private void start(int port) {
-		LOG.info("Starting {} listening on port {}", CamCaptureServer.class.getSimpleName(), port);
-		Thread serverThread = new Thread(new ServerThread(port));
-		serverThread.start();
+	private void start(int serverPort, String watcherDirectory) {
+		LOG.info("Starting {} listening on port {}", CamCaptureServer.class.getSimpleName(), serverPort);
+		ServerThread serverThread = new ServerThread(serverPort);
+		Thread sThread = new Thread(serverThread);
+		sThread.start();
+		WatcherThread watcherThread = new WatcherThread(watcherDirectory);
+		watcherThread.addListener(serverThread);
+		Thread wThread = new Thread();
+		wThread.start();
 	}
 }
