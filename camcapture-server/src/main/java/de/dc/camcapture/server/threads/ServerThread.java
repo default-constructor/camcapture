@@ -3,6 +3,7 @@ package de.dc.camcapture.server.threads;
 import static de.dc.camcapture.server.utils.ServerUtil.*;
 
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -26,13 +27,14 @@ public class ServerThread implements Runnable, Listener {
 	@Override
 	public void run() {
 		LOG.debug("running server thread");
+		String address = "";
 		try ( //
 			ServerSocket serverSocket = new ServerSocket(port); //
 			Socket clientSocket = serverSocket.accept(); //
 			DataInputStream dis = new DataInputStream(clientSocket.getInputStream()); //
 			ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream()) //
 		) {
-			String address = clientSocket.getInetAddress().getHostAddress();
+			address = clientSocket.getInetAddress().getHostAddress();
 			LOG.info("Connected -> {}", address);
 			String input;
 			while (null != (input = dis.readUTF())) {
@@ -41,7 +43,6 @@ public class ServerThread implements Runnable, Listener {
 				if (null == pictureFile) {
 					// Connectivity check every 10 seconds
 					sleep(10000L);
-					LOG.debug("Checking connectivity -> {}", address);
 					oos.writeLong(-1L); // -1 = Connectivity check
 				} else {
 					long timestamp = pictureFile.getCreatedAt();
@@ -59,17 +60,18 @@ public class ServerThread implements Runnable, Listener {
 				}
 				oos.flush();
 			}
+		} catch (EOFException e) {
+			LOG.error("Lost Connection to {}", address);
 		} catch (IOException | IllegalArgumentException e) {
 			LOG.error(e.getMessage(), e);
-			// Waiting 10 seconds to cool down the server
-			sleep(10000L);
-			run();
 		}
+		// Waiting 10 seconds to cool down the server
+		sleep(10000L);
+		run();
 	}
 
 	@Override
 	public void onPictureDetected(PictureFile pictureFile) {
-		LOG.debug("file detected {}", pictureFile);
 		this.pictureFile = pictureFile;
 	}
 
