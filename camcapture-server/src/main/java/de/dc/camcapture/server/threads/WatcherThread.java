@@ -12,6 +12,7 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ import de.dc.camcapture.model.Snapshot;
  * @author Thomas Reno
  */
 public class WatcherThread implements Runnable {
-	
+
 	public interface Listener {
 		void onSnapshotDetected(Snapshot snapshot);
 	}
@@ -43,9 +44,10 @@ public class WatcherThread implements Runnable {
 						File snapshotFile = new File(directory, filename);
 						LOG.info("Snapshot detected {}", filename);
 						try (FileInputStream fis = new FileInputStream(snapshotFile)) {
+							Date createdAt = new Date(snapshotFile.lastModified());
 							byte[] buffer = new byte[fis.available()];
 							fis.read(buffer);
-							Snapshot snapshot = new Snapshot(filename, buffer);
+							Snapshot snapshot = new Snapshot(filename, buffer, createdAt);
 							listener.onSnapshotDetected(snapshot);
 						}
 					}

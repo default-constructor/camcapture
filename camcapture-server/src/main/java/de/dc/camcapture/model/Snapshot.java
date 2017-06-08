@@ -1,7 +1,5 @@
 package de.dc.camcapture.model;
 
-import static de.dc.camcapture.server.utils.ServerUtil.*;
-
 import java.io.Serializable;
 import java.util.Date;
 
@@ -12,19 +10,16 @@ public class Snapshot implements Serializable {
 
 	private static final long serialVersionUID = -8904972727928023384L;
 
-	private static final String PATTERN_FILENAME = "yyyyMMdd_HHmmss";
-
 	private final String filename;
 
 	private final byte[] data;
 
 	private final Date createdAt;
 
-	public Snapshot(String filename, byte[] data) {
+	public Snapshot(String filename, byte[] data, Date createdAt) {
 		this.filename = filename;
 		this.data = data;
-		String name = filename.substring(0, filename.indexOf("."));
-		createdAt = getDateTime(name, PATTERN_FILENAME);
+		this.createdAt = createdAt;
 	}
 
 	public String getFilename() {
