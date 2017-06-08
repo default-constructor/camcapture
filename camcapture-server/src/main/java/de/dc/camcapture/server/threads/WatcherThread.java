@@ -24,7 +24,7 @@ import de.dc.camcapture.model.Snapshot;
  */
 public class WatcherThread implements Runnable {
 
-	public interface Listener {
+	interface Listener {
 		void onSnapshotDetected(Snapshot snapshot);
 	}
 

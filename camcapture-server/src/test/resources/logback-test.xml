@@ -38,7 +38,7 @@
 			<pattern>${PATTERN_OUTPUT}</pattern>
 		</encoder>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${DEV_HOME}/archived/error.%d{yyyy-MM-dd}.%i.log
+			<fileNamePattern>${DEV_HOME}/archived/error.%d{yyyy-MM-dd}.log
 			</fileNamePattern>
 			<timeBasedFileNamingAndTriggeringPolicy
 				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
