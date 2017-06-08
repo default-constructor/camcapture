@@ -31,7 +31,7 @@ public class CamCaptureServer {
 	}
 
 	private void start(int serverPort, String watcherDirectory) {
-		LOG.info("Starting {} -> Port {}", CamCaptureServer.class.getSimpleName(), serverPort);
+		LOG.info("Starting {} -> TCP {}", CamCaptureServer.class.getSimpleName(), serverPort);
 		ServerThread serverThread = new ServerThread(serverPort);
 		Thread sThread = new Thread(serverThread);
 		sThread.start();

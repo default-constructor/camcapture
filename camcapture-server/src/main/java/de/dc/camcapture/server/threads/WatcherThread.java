@@ -1,5 +1,9 @@
 package de.dc.camcapture.server.threads;
 
+import static de.dc.camcapture.server.utils.ServerUtil.*;
+
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -12,8 +16,7 @@ import java.nio.file.WatchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dc.camcapture.server.model.PictureFile;
-import de.dc.camcapture.server.utils.ServerUtil;
+import de.dc.camcapture.model.Snapshot;
 
 /**
  * @author Thomas Reno
@@ -21,7 +24,7 @@ import de.dc.camcapture.server.utils.ServerUtil;
 public class WatcherThread implements Runnable {
 	
 	public interface Listener {
-		void onPictureDetected(PictureFile imageFile);
+		void onSnapshotDetected(Snapshot snapshot);
 	}
 
 	private static final Logger LOG = LoggerFactory.getLogger(WatcherThread.class);
@@ -34,10 +37,17 @@ public class WatcherThread implements Runnable {
 				for (WatchEvent<?> event : watchKey.pollEvents()) {
 					if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
 						// Waiting 1 sec so the file can be finished written
-						ServerUtil.sleep(1000L);
-						String filename = ((Path) event.context()).toFile().getName();
-						LOG.info("Detected file {}", filename);
-						listener.onPictureDetected(new PictureFile(directory, filename));
+						sleep(1000L);
+						File file = ((Path) event.context()).toFile();
+						String filename = file.getName();
+						File snapshotFile = new File(directory, filename);
+						LOG.info("Snapshot detected {}", filename);
+						try (FileInputStream fis = new FileInputStream(snapshotFile)) {
+							byte[] buffer = new byte[fis.available()];
+							fis.read(buffer);
+							Snapshot snapshot = new Snapshot(filename, buffer);
+							listener.onSnapshotDetected(snapshot);
+						}
 					}
 				}
 			}

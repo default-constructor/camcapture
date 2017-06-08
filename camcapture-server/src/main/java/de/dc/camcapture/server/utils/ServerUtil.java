@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -22,20 +25,36 @@ public final class ServerUtil {
 	private static final Logger LOG = LoggerFactory.getLogger(ServerUtil.class);
 
 	/**
-	 * Gets a <code>LocalDateTime</code> object from the given string of the
-	 * given pattern.
-	 * 
+	 * Gets a <code>Date</code> object from the given string of the given
+	 * pattern.
+	 *
 	 * @param dateTime
+	 *            String
+	 * @param pattern
+	 *            String
+	 * @return the <code>Date</code> object
+	 */
+	public static Date getDateTime(String dateTime, String pattern) {
+		SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+		Date date = null;
+		try {
+			date = formatter.parse(dateTime);
+		} catch (ParseException e) {
+			LOG.error(e.getMessage(), e);
+		}
+		return date;
+	}
+
+	/**
+	 * Gets a <code>String</code> object with date and time from the given
+	 * timestamp of the given pattern.
+	 * 
+	 * @param timestamp
 	 *            String
 	 * @param pattern
 	 *            String
 	 * @return the <code>LocalDateTime</code> object
 	 */
-	public static LocalDateTime getDateTime(String dateTime, String pattern) {
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-		return LocalDateTime.parse(dateTime, formatter);
-	}
-
 	public static String getDateTime(long timestamp, String pattern) {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
 		return formatter.format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime());

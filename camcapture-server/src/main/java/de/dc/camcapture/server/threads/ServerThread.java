@@ -4,7 +4,6 @@ import static de.dc.camcapture.server.utils.ServerUtil.*;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
@@ -13,9 +12,8 @@ import java.net.Socket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.dc.camcapture.server.model.PictureFile;
+import de.dc.camcapture.model.Snapshot;
 import de.dc.camcapture.server.threads.WatcherThread.Listener;
-import de.dc.camcapture.server.utils.ServerUtil;
 
 /**
  * @author Thomas Reno
@@ -23,6 +21,10 @@ import de.dc.camcapture.server.utils.ServerUtil;
 public class ServerThread implements Runnable, Listener {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ServerThread.class);
+
+	private static final String CONNECTIVITY_CHECK = "check";
+
+	private static final String FILE_TRANSFER = "transfer";
 
 	@Override
 	public void run() {
@@ -38,44 +40,38 @@ public class ServerThread implements Runnable, Listener {
 			LOG.info("Connected -> {}", address);
 			String input;
 			while (null != (input = dis.readUTF())) {
-				ServerUtil.validateToken(address, input);
+				validateToken(address, input);
 				LOG.info("Verified connection -> {}", address);
-				if (null == pictureFile) {
-					// Connectivity check every 10 seconds
-					sleep(10000L);
-					oos.writeLong(-1L); // -1 = Connectivity check
+				if (null == snapshot) {
+					// Connectivity check in 5 seconds
+					sleep(5000L);
+					oos.writeUTF(CONNECTIVITY_CHECK);
 				} else {
-					long timestamp = pictureFile.getCreatedAt();
-					String filename = pictureFile.getFilename();
-					try (FileInputStream fis = new FileInputStream(pictureFile)) {
-						byte[] buffer = new byte[fis.available()];
-						fis.read(buffer);
-						oos.writeLong(timestamp);
-						oos.writeUTF(filename);
-						oos.writeObject(buffer);
-						LOG.info("Pushed picture -> {} {}", filename, address);
-					}
-					// File clearing to enable connectivity check again
-					pictureFile = null;
+					oos.writeUTF(FILE_TRANSFER);
+					LOG.debug("created at {}", snapshot.getCreatedAt());
+					oos.writeObject(snapshot);
+					LOG.info("Pushed snapshot -> {} {}", snapshot.getFilename(), address);
+					// Clearing file to enable connectivity check again
+					snapshot = null;
 				}
 				oos.flush();
 			}
 		} catch (EOFException e) {
-			LOG.error("Lost Connection to {}", address);
+			LOG.error("Connection lost -> {}", address);
 		} catch (IOException | IllegalArgumentException e) {
 			LOG.error(e.getMessage(), e);
 		}
-		// Waiting 10 seconds to cool down the server
+		// Re-running server in 10 seconds
 		sleep(10000L);
 		run();
 	}
 
 	@Override
-	public void onPictureDetected(PictureFile pictureFile) {
-		this.pictureFile = pictureFile;
+	public void onSnapshotDetected(Snapshot snapshot) {
+		this.snapshot = snapshot;
 	}
 
-	private PictureFile pictureFile;
+	private Snapshot snapshot;
 
 	private final int port;
 
