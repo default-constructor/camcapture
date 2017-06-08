@@ -27,17 +27,6 @@ public final class ClientUtil {
     public static final String TAG = ClientUtil.class.getSimpleName();
 
     /**
-     * Converts the given milliseconds as timestamp to a formatted <code>String</code>.
-     *
-     * @param millis  long
-     * @param pattern String
-     * @return the formatted date string
-     */
-    public static String convert(long millis, String pattern) {
-        return convert(new Date(millis), pattern);
-    }
-
-    /**
      * Converts the given <code>Date</code> to a formatted <code>String</code>.
      *
      * @param date    Date
@@ -68,21 +57,40 @@ public final class ClientUtil {
     }
 
     /**
-     * Gets the date and time of the given milliseconds as timestamp for the notification.
+     * Gets a <code>Date</code> object from the given string of the
+     * given pattern.
      *
-     * @param millis long
+     * @param dateTime String
+     * @param pattern  String
+     * @return the <code>Date</code> object
+     */
+    public static Date getDateTime(String dateTime, String pattern) {
+        SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+        Date date = null;
+        try {
+            date = formatter.parse(dateTime);
+        } catch (ParseException e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
+        return date;
+    }
+
+    /**
+     * Gets the date and time of the given timestamp for the notification.
+     *
+     * @param timestamp Date
      * @return the date and time
      */
-    public static String getDateTimeForNotification(long millis) {
+    public static String getDateTimeForNotification(Date timestamp) {
         Calendar now = GregorianCalendar.getInstance();
         Calendar then = new GregorianCalendar();
-        then.setTimeInMillis(millis);
+        then.setTime(timestamp);
         if (then.get(YEAR) == now.get(YEAR)
                 && then.get(MONTH) == now.get(MONTH)
                 && then.get(DAY_OF_MONTH) == now.get(DAY_OF_MONTH)) {
-            return convert(millis, "HH:mm:ss");
+            return convert(timestamp, "HH:mm:ss");
         }
-        return convert(millis, "dd.MM.yyyy HH:mm:ss");
+        return convert(timestamp, "dd.MM.yyyy HH:mm:ss");
     }
 
     private static final Properties PROPS = new Properties();
@@ -93,17 +101,17 @@ public final class ClientUtil {
      * @param key String
      * @return the property value
      */
-    public static String getProperty(String key, AssetManager assetMgr) {
+    public static String getProperty(String key, AssetManager assetManager) {
         try {
             if (PROPS.isEmpty()) {
-                try (InputStream is = assetMgr.open("client.properties")) {
+                try (InputStream is = assetManager.open("client.properties")) {
                     PROPS.load(is);
                 }
             }
             return PROPS.getProperty(key);
         } catch (IOException e) {
-            Log.e(TAG, "Cannot load server properties");
-            throw new RuntimeException("Cannot load server properties");
+            Log.e(TAG, e.getMessage(), e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -125,6 +133,20 @@ public final class ClientUtil {
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Sleeps for the given milliseconds.
+     *
+     * @param millis
+     *            long
+     */
+    public static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            // nothing to do...
         }
     }
 

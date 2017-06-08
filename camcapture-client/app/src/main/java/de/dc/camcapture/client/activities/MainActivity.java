@@ -13,7 +13,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 
 import java.io.DataOutputStream;
@@ -26,10 +25,12 @@ import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import de.dc.camcapture.client.R;
 import de.dc.camcapture.client.utils.PermissionRequestHandler;
+import de.dc.camcapture.model.Snapshot;
 
 import static de.dc.camcapture.client.utils.ClientUtil.*;
 
@@ -41,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private class ClientTask extends AsyncTask<Void, Void, Void> {
 
         private static final String CLIENT_TOKEN = "client.token";
+
+        private static final String CONNECTIVITY_CHECK = "check";
 
         @Override
         protected Void doInBackground(Void... params) {
@@ -56,21 +59,17 @@ public class MainActivity extends AppCompatActivity {
                     while (true) {
                         dos.writeUTF(hashedToken);
                         dos.flush();
-                        long timestamp;
-                        if (/* Connectivity-check */ -1L == (timestamp = ois.readLong())) {
+                        if (CONNECTIVITY_CHECK.equals(ois.readUTF())) {
+                            sleep(5000L);
                             continue;
                         }
-                        String filename = ois.readUTF();
-                        bufferContent = (byte[]) ois.readObject();
-                        if (0 == bufferContent.length) {
-                            Log.e(TAG, "Response without content [" + filename + "]");
-                            continue;
-                        }
-                        saveImage(filename, bufferContent);
-                        showNotification(timestamp, filename);
+                        Snapshot snapshot = (Snapshot) ois.readObject();
+                        Log.d(TAG, "created at " + snapshot.getCreatedAt());
+                        saveSnapshot(snapshot);
+                        showNotification(snapshot.getCreatedAt(), snapshot.getFilename());
                     }
                 } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
+                    Log.e(TAG, e.getMessage(), e);
                 }
             } catch (IOException e) {
                 Log.e(TAG, "Connection to server failed. Next try in 10 seconds.");
@@ -132,12 +131,7 @@ public class MainActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_main);
         Button button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MainActivity.this.startConnection();
-            }
-        });
+        button.setOnClickListener(v -> MainActivity.this.startConnection());
     }
 
     /**
@@ -238,26 +232,23 @@ public class MainActivity extends AppCompatActivity {
         return Environment.MEDIA_MOUNTED.equals(state);
     }
 
-    private void saveImage(String filename, byte[] bytes) {
-        Log.d(TAG, "filename: " + filename);
-        File file = new File(DIRECTORY, filename);
+    private void saveSnapshot(Snapshot snapshot) {
+        File file = new File(DIRECTORY, snapshot.getFilename());
         try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(bytes);
+            fos.write(snapshot.getData());
             fos.flush();
             MediaScannerConnection.scanFile(this, new String[]{file.toString()}, null, null);
-            Log.i(TAG, "Saved image " + file.toString());
+            Log.i(TAG, "Saved snapshot " + file.toString());
         } catch (FileNotFoundException e) {
-            Log.d(TAG, "file not found exception");
-            e.printStackTrace();
+            Log.e(TAG, e.getMessage(), e);
         } catch (IOException e) {
-            Log.d(TAG, "input output exception");
-            e.printStackTrace();
+            Log.d(TAG, e.getMessage(), e);
         }
     }
 
-    private void showNotification(long timestamp, String filename) {
+    private void showNotification(Date timestamp, String filename) {
         Intent intent = new Intent(this, PictureViewActivity.class);
-        intent.putExtra("image", filename);
+        intent.putExtra("snapshot", filename);
 
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addParentStack(PictureViewActivity.class);

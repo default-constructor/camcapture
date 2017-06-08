@@ -70,12 +70,13 @@ public class PictureViewActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pictureview);
-        File pictures = new File(DIRECTORY_NAME);
-        files = pictures.listFiles();
-        ImageFragmentStatePagerAdapter fragmentStatePagerAdapter = new ImageFragmentStatePagerAdapter(getSupportFragmentManager());
+        File directory = new File(DIRECTORY_NAME);
+        files = directory.listFiles();
+        ImageFragmentStatePagerAdapter fragmentStatePagerAdapter =
+                new ImageFragmentStatePagerAdapter(getSupportFragmentManager());
         ViewPager viewPager = (ViewPager) findViewById(R.id.viewPager);
         viewPager.setAdapter(fragmentStatePagerAdapter);
         viewPager.setCurrentItem(files.length - 1);
-        String filename = getIntent().getExtras().getString("image");
+        String filename = getIntent().getExtras().getString("snapshot");
     }
 }
