@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -35,7 +36,7 @@ public final class ServerUtil {
 	 * @return the <code>Date</code> object
 	 */
 	public static Date getDateTime(String dateTime, String pattern) {
-		SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+		DateFormat formatter = new SimpleDateFormat(pattern);
 		Date date = null;
 		try {
 			date = formatter.parse(dateTime);

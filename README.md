@@ -1,1 +1,4 @@
-# camcapture
+# CamCapture
+### Detector
+### Server
+### Client

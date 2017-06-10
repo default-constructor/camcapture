@@ -11,9 +11,7 @@ public class Snapshot implements Serializable {
 	private static final long serialVersionUID = -8904972727928023384L;
 
 	private final String filename;
-
 	private final byte[] data;
-
 	private final Date createdAt;
 
 	public Snapshot(String filename, byte[] data, Date createdAt) {

@@ -33,7 +33,6 @@ public class WatcherThread implements Runnable {
 	@Override
 	public void run() {
 		try {
-			WatchKey watchKey = Paths.get(directory).register(watcherService, StandardWatchEventKinds.ENTRY_CREATE);
 			while (true) {
 				for (WatchEvent<?> event : watchKey.pollEvents()) {
 					if (StandardWatchEventKinds.ENTRY_CREATE.equals(event.kind())) {
@@ -61,15 +60,12 @@ public class WatcherThread implements Runnable {
 	private Listener listener;
 
 	private final String directory;
-	private final WatchService watcherService;
+	private final WatchKey watchKey;
 
-	public WatcherThread(String directory) {
+	public WatcherThread(String directory) throws IOException {
 		this.directory = directory;
-		try {
-			watcherService = FileSystems.getDefault().newWatchService();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		WatchService watcherService = FileSystems.getDefault().newWatchService();
+		watchKey = Paths.get(directory).register(watcherService, StandardWatchEventKinds.ENTRY_CREATE);
 	}
 
 	public void addListener(Listener listener) {
